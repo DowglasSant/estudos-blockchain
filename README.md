@@ -1,0 +1,869 @@
+# Blockchain: Fundamentos de Registros Imutáveis e Redes Distribuídas
+
+Este documento consolida os conceitos fundamentais de blockchain, cobrindo **registros imutáveis** e **redes P2P distribuídas**, servindo como referência para estudo e revisão.
+
+---
+
+## Índice
+
+### Parte 1: Estrutura e Criptografia
+1. [O que é Blockchain](#o-que-é-blockchain)
+2. [Estrutura de um Bloco](#estrutura-de-um-bloco)
+3. [O Bloco Genesis](#o-bloco-genesis)
+4. [Hash SHA256: O Coração da Segurança](#hash-sha256-o-coração-da-segurança)
+5. [Propriedades Fundamentais do Hash Criptográfico](#propriedades-fundamentais-do-hash-criptográfico)
+6. [Encadeamento de Blocos](#encadeamento-de-blocos)
+7. [Imutabilidade: Por que Não se Corrige o Passado](#imutabilidade-por-que-não-se-corrige-o-passado)
+8. [Custo de um Ataque (Cadeia Isolada)](#custo-de-um-ataque)
+
+### Parte 2: Redes Distribuídas
+9. [Redes P2P: Conceito Geral](#redes-p2p-conceito-geral)
+10. [P2P Aplicado ao Blockchain](#p2p-aplicado-ao-blockchain)
+11. [Consenso e Regra da Maioria](#consenso-e-regra-da-maioria)
+12. [Ataque 51%: O Limite da Descentralização](#ataque-51-o-limite-da-descentralização)
+
+### Resumo e Referências
+13. [Resumo Visual](#resumo-visual)
+14. [Próximos Passos](#próximos-passos)
+15. [Referências Técnicas](#referências-técnicas)
+
+---
+
+## O que é Blockchain
+
+Blockchain é uma **estrutura de dados** composta por blocos encadeados através de hashes criptográficos. Cada bloco contém informações e está matematicamente vinculado ao bloco anterior, formando uma corrente (chain) que cresce apenas por adição — nunca por modificação.
+
+```
+┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐
+│ Bloco 0 │───▶│ Bloco 1 │───▶│ Bloco 2 │───▶│ Bloco 3 │
+│ Genesis │    │         │    │         │    │         │
+└─────────┘    └─────────┘    └─────────┘    └─────────┘
+```
+
+**Princípio central:** A integridade de toda a cadeia depende da integridade de cada bloco individual.
+
+---
+
+## Estrutura de um Bloco
+
+Cada bloco na cadeia possui três componentes essenciais:
+
+| Componente | Descrição |
+|------------|-----------|
+| **Dado** | A informação armazenada (transações, registros, etc.) |
+| **Hash Anterior** | O hash do bloco que vem antes na cadeia |
+| **Hash Próprio** | Calculado a partir do dado + hash anterior |
+
+### Representação Visual
+
+```
+┌────────────────────────────────────┐
+│            BLOCO N                 │
+├────────────────────────────────────┤
+│  Hash Anterior: 7a3f2b...          │  ← Vínculo com bloco N-1
+├────────────────────────────────────┤
+│  Dado: "Alice envia 10 para Bob"   │  ← Conteúdo do bloco
+├────────────────────────────────────┤
+│  Hash: 9c4e8d...                   │  ← SHA256(dado + hash anterior)
+└────────────────────────────────────┘
+```
+
+### Fórmula do Hash
+
+```
+Hash do Bloco = SHA256(Dado do Bloco + Hash do Bloco Anterior)
+```
+
+Esta fórmula cria o **vínculo criptográfico** entre blocos consecutivos.
+
+---
+
+## O Bloco Genesis
+
+O **bloco genesis** (bloco 0) é o primeiro bloco da cadeia e possui características únicas:
+
+- **Não possui antecessor** — é a âncora de toda a cadeia
+- **Hash anterior é zero** (ou string vazia/nula)
+- **Seu hash é formado apenas pelo dado** que contém
+
+```
+┌────────────────────────────────────┐
+│         BLOCO GENESIS              │
+├────────────────────────────────────┤
+│  Hash Anterior: 0000000000...      │  ← Valor nulo/zero
+├────────────────────────────────────┤
+│  Dado: "Bloco inicial da cadeia"   │
+├────────────────────────────────────┤
+│  Hash: a1b2c3d4e5...               │  ← SHA256(dado)
+└────────────────────────────────────┘
+```
+
+**Importância:** O bloco genesis é imutável por definição. Qualquer alteração nele invalidaria toda a cadeia subsequente.
+
+---
+
+## Hash SHA256: O Coração da Segurança
+
+### O que é SHA256?
+
+SHA256 (Secure Hash Algorithm 256-bit) é uma função hash criptográfica que transforma qualquer entrada em uma saída de tamanho fixo.
+
+### Especificações Técnicas
+
+| Característica | Valor |
+|----------------|-------|
+| **Tamanho da saída** | 256 bits |
+| **Representação** | 64 caracteres hexadecimais |
+| **Caracteres válidos** | 0-9 e a-f |
+| **Possibilidades** | 2²⁵⁶ ≈ 1.16 × 10⁷⁷ combinações |
+
+### Por que 64 caracteres?
+
+Cada caractere hexadecimal representa **4 bits**:
+
+```
+64 caracteres × 4 bits = 256 bits
+```
+
+### Exemplo Prático
+
+```
+Entrada: "Hello"
+Saída:   185f8db32271fe25f561a6fc938b2e264306ec304eda518007d1764826381969
+
+Entrada: "hello" (apenas 'H' minúsculo)
+Saída:   2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824
+```
+
+Note como uma mudança mínima (H → h) gera um hash **completamente diferente**.
+
+---
+
+## Propriedades Fundamentais do Hash Criptográfico
+
+Para que um hash seja considerado **criptograficamente seguro**, ele deve satisfazer cinco propriedades:
+
+### 1. Função de Sentido Único (One-Way)
+
+```
+Dado ──────▶ Hash ✓ (fácil)
+Hash ──────▶ Dado ✗ (impossível)
+```
+
+- A partir do hash, **não é possível reconstruir** o dado original
+- Não é possível extrair informações relevantes sobre a entrada
+- O hash serve para **verificação**, não para reversão
+
+**Analogia:** É como um moedor de carne — você pode transformar carne em carne moída, mas não pode reverter carne moída em um bife.
+
+### 2. Determinismo
+
+```
+"Blockchain" ──▶ SHA256 ──▶ sempre ef7797...
+"Blockchain" ──▶ SHA256 ──▶ sempre ef7797...
+"Blockchain" ──▶ SHA256 ──▶ sempre ef7797...
+```
+
+- O **mesmo dado** sempre produz o **mesmo hash**
+- Não há aleatoriedade no processo
+- Fundamental para **verificação de integridade**
+
+**Sem determinismo:** Seria impossível verificar se um dado foi alterado.
+
+### 3. Processamento Rápido
+
+- O cálculo do hash deve ser **eficiente**
+- Permite uso em **larga escala**: milhões de transações, arquivos, validações
+- Viabiliza aplicações práticas em tempo real
+
+**Contexto:** Uma rede blockchain processa milhares de transações por segundo. Cada uma requer múltiplos cálculos de hash.
+
+### 4. Efeito Avalanche
+
+```
+Entrada A: "Transferir 100 reais"
+Hash A:    7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069
+
+Entrada B: "Transferir 101 reais"  (mudança de 1 dígito)
+Hash B:    3e23e8160039594a33894f6564e1b1348bbd7a0088d42c4acb73eeaed59c009d
+```
+
+- Uma alteração **mínima** (1 bit) gera um hash **completamente diferente**
+- Impossibilita "ajustes finos" maliciosos
+- Não há como prever o hash de uma entrada similar
+
+**Segurança:** Um atacante não consegue fazer pequenas alterações até "acertar" um hash desejado.
+
+### 5. Resistência a Colisões
+
+```
+Dado A ──▶ Hash X
+Dado B ──▶ Hash X   ← Colisão (mesmo hash para dados diferentes)
+```
+
+- Colisões são **matematicamente inevitáveis** (infinitas entradas, finitas saídas)
+- Porém, é **computacionalmente inviável** encontrar uma colisão de propósito
+- Com 2²⁵⁶ possibilidades, a probabilidade é desprezível
+
+**Números:** Para ter 50% de chance de encontrar uma colisão no SHA256, seria necessário calcular aproximadamente 2¹²⁸ hashes — mais do que o número de átomos na Terra.
+
+### Tabela Resumo das Propriedades
+
+| Propriedade | O que Garante | Consequência se Falhar |
+|-------------|---------------|------------------------|
+| One-Way | Privacidade do dado original | Dados expostos |
+| Determinismo | Verificação de integridade | Impossível validar |
+| Velocidade | Escalabilidade | Sistema lento/inviável |
+| Avalanche | Proteção contra manipulação | Ataques por aproximação |
+| Resistência a Colisões | Unicidade do hash | Falsificação de dados |
+
+---
+
+## Encadeamento de Blocos
+
+O encadeamento é o que transforma blocos isolados em uma **cadeia segura**.
+
+### Como Funciona
+
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│    BLOCO 0      │     │    BLOCO 1      │     │    BLOCO 2      │
+├─────────────────┤     ├─────────────────┤     ├─────────────────┤
+│ Prev: 0000...   │     │ Prev: a1b2...   │────▶│ Prev: c3d4...   │
+│ Data: "Genesis" │     │ Data: "Tx 1"    │     │ Data: "Tx 2"    │
+│ Hash: a1b2...   │────▶│ Hash: c3d4...   │     │ Hash: e5f6...   │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+```
+
+### O Efeito Dominó
+
+Se alterarmos o **Bloco 1**:
+
+1. O dado do Bloco 1 muda
+2. O hash do Bloco 1 muda (efeito avalanche)
+3. O "hash anterior" do Bloco 2 não bate mais
+4. O Bloco 2 se torna inválido
+5. E assim por diante até o último bloco
+
+```
+Alteração no Bloco 1:
+
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│    BLOCO 0      │     │    BLOCO 1      │     │    BLOCO 2      │
+├─────────────────┤     ├─────────────────┤     ├─────────────────┤
+│ Prev: 0000...   │     │ Prev: a1b2...   │  ✗  │ Prev: c3d4...   │
+│ Data: "Genesis" │     │ Data: "ALTERADO"│     │ Data: "Tx 2"    │
+│ Hash: a1b2...   │────▶│ Hash: XXXX...   │──╳──│ Hash: e5f6...   │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+                              │                        │
+                              │    Hash não corresponde!
+                              ▼                        ▼
+                        INVÁLIDO                  INVÁLIDO
+```
+
+---
+
+## Imutabilidade: Por que Não se Corrige o Passado
+
+### O Princípio Fundamental
+
+> **Em blockchain, não se corrige informações anteriores. Se um evento foi registrado erroneamente, ele deve ser compensado em um novo bloco.**
+
+### Exemplo Prático
+
+**Situação:** Alice transferiu 100 para Bob, mas deveria ter transferido 50.
+
+❌ **Abordagem tradicional (banco de dados):**
+```
+UPDATE transacoes SET valor = 50 WHERE id = 123;
+```
+
+✅ **Abordagem blockchain:**
+```
+Bloco N:   "Alice transfere 100 para Bob"     ← Permanece inalterado
+Bloco N+1: "Bob devolve 50 para Alice"        ← Compensação
+```
+
+### Por que Isso Importa?
+
+| Aspecto | Benefício |
+|---------|-----------|
+| **Auditoria** | Histórico completo e inalterável |
+| **Transparência** | Todos podem verificar o que aconteceu |
+| **Confiança** | Ninguém pode "reescrever a história" |
+| **Rastreabilidade** | Cada correção é documentada |
+
+---
+
+## Custo de um Ataque
+
+### O Cenário de Ataque
+
+Um atacante quer modificar um registro antigo na blockchain. O que ele precisa fazer?
+
+```
+Cadeia original (100 blocos):
+
+[0]──[1]──[2]──[3]──...──[50]──[51]──...──[99]──[100]
+                           │
+                    Atacante quer alterar este bloco
+```
+
+### Passos Necessários para o Ataque
+
+1. **Alterar o bloco 50** com a informação fraudulenta
+2. **Recalcular o hash** do bloco 50 (novo dado = novo hash)
+3. **Atualizar o bloco 51** com o novo hash anterior
+4. **Recalcular o hash** do bloco 51
+5. **Repetir para todos os blocos subsequentes** (51 até 100)
+
+```
+Trabalho necessário:
+
+[50] ← Alterar + recalcular
+  │
+  ▼
+[51] ← Recalcular (hash anterior mudou)
+  │
+  ▼
+[52] ← Recalcular (hash anterior mudou)
+  │
+  ▼
+ ...
+  │
+  ▼
+[100] ← Recalcular (hash anterior mudou)
+
+Total: 51 blocos precisam ser recalculados
+```
+
+### Por que Isso é Difícil?
+
+Neste modelo simplificado (sem proof of work), o custo é proporcional ao número de blocos. Mas mesmo assim:
+
+- **Tempo:** Quanto mais antiga a alteração, mais blocos para recalcular
+- **Detecção:** Qualquer nó da rede pode verificar a integridade
+- **Competição:** Enquanto o atacante recalcula, novos blocos legítimos são adicionados
+
+### Visualização do Custo
+
+```
+Bloco alterado     Blocos a recalcular     Dificuldade relativa
+─────────────────────────────────────────────────────────────────
+Bloco 99           1 bloco                 Baixa
+Bloco 90           10 blocos               Média
+Bloco 50           50 blocos               Alta
+Bloco 10           90 blocos               Muito alta
+Bloco 0            100 blocos              Máxima (toda a cadeia)
+```
+
+---
+
+# Parte 2: Redes Distribuídas
+
+---
+
+## Redes P2P: Conceito Geral
+
+Antes de entender como blockchain usa redes distribuídas, é importante compreender o conceito de **P2P (Peer-to-Peer)** de forma geral.
+
+### Modelo Tradicional: Cliente-Servidor
+
+No modelo tradicional da internet, existe uma hierarquia clara:
+
+```
+              ┌──────────────┐
+              │   SERVIDOR   │  ← Autoridade central
+              │              │    (controla tudo)
+              └──────┬───────┘
+                     │
+        ┌────────────┼────────────┐
+        │            │            │
+        ▼            ▼            ▼
+   ┌────────┐   ┌────────┐   ┌────────┐
+   │Cliente │   │Cliente │   │Cliente │  ← Apenas consomem
+   └────────┘   └────────┘   └────────┘
+```
+
+**Características:**
+- Um **servidor centralizado** detém toda a informação e controle
+- Clientes apenas **solicitam e consomem** dados
+- Se o servidor cai, **todo o sistema para**
+- O servidor é um **ponto único de falha** e de controle
+
+**Exemplos:** Netflix, bancos tradicionais, e-mail (Gmail, Outlook), redes sociais centralizadas.
+
+### Modelo P2P (Peer-to-Peer)
+
+No modelo P2P, **não existe hierarquia**. Todos os participantes são equivalentes:
+
+```
+       ┌──────┐                 ┌──────┐
+       │ Peer │◀───────────────▶│ Peer │
+       └──┬───┘                 └───┬──┘
+          │                         │
+          │       ┌──────┐          │
+          └──────▶│ Peer │◀─────────┘
+                  └──┬───┘
+                     │
+          ┌──────────┴──────────┐
+          │                     │
+          ▼                     ▼
+      ┌──────┐              ┌──────┐
+      │ Peer │◀────────────▶│ Peer │
+      └──────┘              └──────┘
+
+      Todos são iguais. Todos se conectam entre si.
+```
+
+**Características:**
+- **Sem hierarquia** — todos os nós são equivalentes (peer = par, igual)
+- **Sem ponto central de falha** — a rede sobrevive mesmo se vários nós caírem
+- **Cada nó é cliente E servidor** simultaneamente
+- **Recursos distribuídos** — dados, processamento e banda são compartilhados
+
+### Comparação: Cliente-Servidor vs P2P
+
+| Aspecto | Cliente-Servidor | P2P |
+|---------|------------------|-----|
+| **Controle** | Centralizado | Distribuído |
+| **Ponto de falha** | Servidor é crítico | Nenhum nó é crítico |
+| **Escalabilidade** | Servidor é gargalo | Cresce com mais nós |
+| **Confiança** | Depositada no servidor | Depositada no protocolo |
+| **Censura** | Fácil (desliga servidor) | Difícil (milhares de nós) |
+| **Custo** | Infraestrutura cara | Distribuído entre participantes |
+
+### Exemplos Históricos de P2P
+
+| Sistema | Ano | O que Distribui | Status |
+|---------|-----|-----------------|--------|
+| **Napster** | 1999 | Músicas | Fechado (parcialmente P2P) |
+| **BitTorrent** | 2001 | Arquivos em geral | Ativo |
+| **Skype** (original) | 2003 | Chamadas de voz | Migrou para centralizado |
+| **Bitcoin** | 2009 | Transações financeiras | Ativo |
+| **IPFS** | 2015 | Arquivos (web distribuída) | Ativo |
+
+### Definição Formal
+
+> **Rede P2P é uma arquitetura onde não existe autoridade central. Os participantes (peers) colaboram diretamente entre si, compartilhando recursos e responsabilidades de forma igualitária, seguindo um protocolo comum.**
+
+---
+
+## P2P Aplicado ao Blockchain
+
+Blockchain combina a **estrutura de dados encadeada** (blocos + hashes) com uma **rede P2P distribuída** para criar um sistema verdadeiramente descentralizado.
+
+### Arquitetura da Rede Blockchain
+
+```
+                    REDE BLOCKCHAIN DISTRIBUÍDA
+    ═══════════════════════════════════════════════════════
+
+         ┌─────────┐                     ┌─────────┐
+         │  NÓ A   │◀───────────────────▶│  NÓ B   │
+         │ ┌─────┐ │                     │ ┌─────┐ │
+         │ │Chain│ │                     │ │Chain│ │
+         │ └─────┘ │                     │ └─────┘ │
+         └────┬────┘                     └────┬────┘
+              │                               │
+              │         ┌─────────┐           │
+              └────────▶│  NÓ C   │◀──────────┘
+                        │ ┌─────┐ │
+                        │ │Chain│ │
+                        │ └─────┘ │
+                        └────┬────┘
+                             │
+              ┌──────────────┴──────────────┐
+              │                             │
+              ▼                             ▼
+         ┌─────────┐                   ┌─────────┐
+         │  NÓ D   │◀─────────────────▶│  NÓ E   │
+         │ ┌─────┐ │                   │ ┌─────┐ │
+         │ │Chain│ │                   │ │Chain│ │
+         │ └─────┘ │                   │ └─────┘ │
+         └─────────┘                   └─────────┘
+
+    Cada nó possui uma CÓPIA COMPLETA da blockchain
+```
+
+### Princípio Fundamental
+
+> **Cada nó da rede mantém uma cópia completa e idêntica de toda a blockchain.**
+
+Isso significa que:
+- Não existe um "servidor" que guarda "a blockchain oficial"
+- Cada participante tem sua própria cópia verificável
+- A "verdade" emerge do **consenso** entre os nós
+
+### O que Cada Nó Faz
+
+| Função | Descrição |
+|--------|-----------|
+| **Armazena** | Mantém cópia completa da blockchain |
+| **Valida** | Verifica integridade dos blocos recebidos |
+| **Propaga** | Compartilha novos blocos com outros nós |
+| **Sincroniza** | Mantém sua cópia atualizada com a rede |
+
+### Fluxo de um Novo Bloco
+
+Quando um novo bloco é criado:
+
+```
+1. Nó A cria/recebe novo bloco
+
+       ┌─────────┐
+       │  NÓ A   │  ← Bloco novo criado aqui
+       │ [1][2][3]│
+       └────┬────┘
+            │
+            ▼ Propaga para vizinhos
+
+2. Vizinhos validam e propagam
+
+       ┌─────────┐         ┌─────────┐
+       │  NÓ B   │         │  NÓ C   │
+       │ [1][2]  │   →     │ [1][2]  │
+       │   ↓     │         │   ↓     │
+       │  [3]✓   │         │  [3]✓   │  ← Validam e aceitam
+       └────┬────┘         └────┬────┘
+            │                   │
+            ▼                   ▼
+
+3. Toda a rede atualizada
+
+    Todos os nós agora têm: [1][2][3]
+```
+
+---
+
+## Consenso e Regra da Maioria
+
+### O Problema
+
+Em uma rede distribuída, como decidir qual versão da blockchain é a "correta"?
+
+```
+Situação problemática:
+
+    NÓ A: [0]──[1]──[2]──[3]
+    NÓ B: [0]──[1]──[2]──[3]
+    NÓ C: [0]──[1]──[2]──[3']  ← Bloco diferente!
+    NÓ D: [0]──[1]──[2]──[3]
+    NÓ E: [0]──[1]──[2]──[3]
+
+    Qual é a versão correta? A de C ou a dos outros?
+```
+
+### A Solução: Regra da Maioria
+
+> **A versão válida da blockchain é aquela aceita pela maioria dos nós da rede (50% + 1).**
+
+```
+Contagem:
+
+    Versão com [3]:  A, B, D, E  →  4 nós (80%)  ✓ VÁLIDA
+    Versão com [3']: C           →  1 nó  (20%)  ✗ REJEITADA
+
+    Resultado: Nó C deve atualizar sua chain para a versão majoritária
+```
+
+### Verificação Contínua
+
+A rede está **constantemente verificando** a consistência:
+
+```
+Loop de verificação (simplificado):
+
+    ┌─────────────────────────────────────────────────────┐
+    │                                                     │
+    │   Para cada nó na rede:                             │
+    │   │                                                 │
+    │   ├──▶ Comparar minha chain com vizinhos            │
+    │   │                                                 │
+    │   ├──▶ Se minha chain ≠ maioria:                    │
+    │   │        └──▶ Atualizar para versão majoritária   │
+    │   │                                                 │
+    │   └──▶ Repetir continuamente                        │
+    │                                                     │
+    └─────────────────────────────────────────────────────┘
+```
+
+### Correção Automática
+
+Quando um nó está com dados diferentes da maioria, ele é **automaticamente corrigido**:
+
+```
+Antes da sincronização:
+
+    NÓ A: [0]──[1]──[2]──[3]     ┐
+    NÓ B: [0]──[1]──[2]──[3]     │ Maioria
+    NÓ C: [0]──[1]──[2X]──[3X]   │ ← Divergente (malicioso ou defeituoso)
+    NÓ D: [0]──[1]──[2]──[3]     │
+    NÓ E: [0]──[1]──[2]──[3]     ┘
+
+Após sincronização:
+
+    NÓ A: [0]──[1]──[2]──[3]
+    NÓ B: [0]──[1]──[2]──[3]
+    NÓ C: [0]──[1]──[2]──[3]     ← Corrigido automaticamente
+    NÓ D: [0]──[1]──[2]──[3]
+    NÓ E: [0]──[1]──[2]──[3]
+
+    ✓ Consenso restaurado
+```
+
+### Por que Isso Funciona
+
+| Fator | Contribuição para Segurança |
+|-------|----------------------------|
+| **Redundância** | Milhares de cópias = impossível destruir dados |
+| **Transparência** | Qualquer um pode verificar a integridade |
+| **Automatização** | Correção acontece sem intervenção humana |
+| **Descentralização** | Nenhum ponto único de controle ou falha |
+
+---
+
+## Ataque 51%: O Limite da Descentralização
+
+### O Cenário de Ataque
+
+Para manipular a blockchain em uma rede distribuída, um atacante precisaria:
+
+```
+Requisitos para ataque bem-sucedido:
+
+    1. Controlar mais de 50% dos nós da rede
+    2. Alterar a blockchain nesses nós
+    3. Fazer isso SIMULTANEAMENTE
+    4. Antes que a rede corrija os nós comprometidos
+
+    ┌─────────────────────────────────────────────────────┐
+    │                                                     │
+    │   Rede com 10.000 nós                               │
+    │                                                     │
+    │   Para ataque: comprometer > 5.000 nós              │
+    │                ao mesmo tempo                       │
+    │                em questão de minutos                │
+    │                                                     │
+    └─────────────────────────────────────────────────────┘
+```
+
+### Por que é Praticamente Impossível
+
+```
+Obstáculos para o atacante:
+
+    ┌──────────────────┐
+    │ 1. ESCALA        │  Milhares de máquinas independentes
+    └────────┬─────────┘  em diferentes países e jurisdições
+             │
+             ▼
+    ┌──────────────────┐
+    │ 2. COORDENAÇÃO   │  Ataque precisa ser simultâneo
+    └────────┬─────────┘  (verificação é constante)
+             │
+             ▼
+    ┌──────────────────┐
+    │ 3. TEMPO         │  Enquanto ataca, rede continua
+    └────────┬─────────┘  adicionando blocos legítimos
+             │
+             ▼
+    ┌──────────────────┐
+    │ 4. CUSTO         │  Recursos computacionais enormes
+    └────────┬─────────┘  (especialmente com PoW)
+             │
+             ▼
+    ┌──────────────────┐
+    │ 5. DETECÇÃO      │  Anomalias são rapidamente
+    └──────────────────┘  identificadas pela comunidade
+```
+
+### Exemplo Numérico
+
+```
+Bitcoin (exemplo aproximado):
+
+    Nós na rede:        ~15.000 nós completos
+    Para ataque 51%:    ~7.500 nós comprometidos
+
+    Considerando:
+    - Nós em ~100 países diferentes
+    - Diferentes ISPs e infraestruturas
+    - Operadores independentes e anônimos
+    - Verificação contínua 24/7
+
+    Probabilidade de sucesso: Praticamente zero
+```
+
+### Tabela de Dificuldade por Tamanho da Rede
+
+| Tamanho da Rede | Nós para 51% | Dificuldade |
+|-----------------|--------------|-------------|
+| 10 nós | 6 nós | Trivial |
+| 100 nós | 51 nós | Fácil |
+| 1.000 nós | 501 nós | Moderada |
+| 10.000 nós | 5.001 nós | Muito difícil |
+| 100.000 nós | 50.001 nós | Praticamente impossível |
+
+### Nota Importante
+
+Este modelo considera apenas a **quantidade de nós**. Em redes reais com **Proof of Work** (como Bitcoin), o ataque 51% se refere ao **poder computacional** (hashrate), não apenas ao número de nós. Isso adiciona outra camada de dificuldade que será estudada no tópico de PoW.
+
+---
+
+## Resumo Visual
+
+### Anatomia Completa de uma Blockchain
+
+```
+                    BLOCKCHAIN: REGISTROS IMUTÁVEIS
+═══════════════════════════════════════════════════════════════════
+
+    ┌─────────────────────────────────────────────────────────┐
+    │                    BLOCO GENESIS                        │
+    │  ┌───────────────────────────────────────────────────┐  │
+    │  │ Hash Anterior: 000000000000000000000000000000000  │  │
+    │  │ Dado: "Início da cadeia"                          │  │
+    │  │ Hash: a1b2c3d4e5f6789...                          │  │
+    │  └───────────────────────────────────────────────────┘  │
+    └─────────────────────────┬───────────────────────────────┘
+                              │
+                              ▼
+    ┌─────────────────────────────────────────────────────────┐
+    │                      BLOCO 1                            │
+    │  ┌───────────────────────────────────────────────────┐  │
+    │  │ Hash Anterior: a1b2c3d4e5f6789...                 │◀─┤ Vínculo
+    │  │ Dado: "Transação: Alice → Bob: 50"                │  │
+    │  │ Hash: b2c3d4e5f6a7890...                          │  │
+    │  └─────────────────────────────────────────────────��─┘  │
+    └─────────────────────────┬───────────────────────────────┘
+                              │
+                              ▼
+    ┌─────────────────────────────────────────────────────────┐
+    │                      BLOCO 2                            │
+    │  ┌───────────────────────────────────────────────────┐  │
+    │  │ Hash Anterior: b2c3d4e5f6a7890...                 │◀─┤ Vínculo
+    │  │ Dado: "Transação: Bob → Carol: 30"                │  │
+    │  │ Hash: c3d4e5f6a7b8901...                          │  │
+    │  └───────────────────────────────────────────────────┘  │
+    └─────────────────────────┬───────────────────────────────┘
+                              │
+                              ▼
+                            [...]
+
+
+═══════════════════════════════════════════════════════════════════
+                    PROPRIEDADES DO SHA256
+═══════════════════════════════════════════════════════════════════
+
+    ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+    │   ONE-WAY    │  │ DETERMINISMO │  │  VELOCIDADE  │
+    │              │  │              │  │              │
+    │  Hash → Dado │  │ Mesmo input  │  │   Cálculo    │
+    │  impossível  │  │ mesmo output │  │   rápido     │
+    └──────────────┘  └──────────────┘  └──────────────┘
+
+    ┌──────────────────────┐  ┌──────────────────────┐
+    │   EFEITO AVALANCHE   │  │ RESISTÊNCIA COLISÃO  │
+    │                      │  │                      │
+    │  1 bit muda = hash   │  │ Encontrar 2 inputs   │
+    │  totalmente diferente│  │ com mesmo hash é     │
+    │                      │  │ computacionalmente   │
+    │                      │  │ inviável             │
+    └──────────────────────┘  └──────────────────────┘
+
+
+═══════════════════════════════════════════════════════════════════
+                    PRINCÍPIO DE IMUTABILIDADE
+═══════════════════════════════════════════════════════════════════
+
+    ERRADO ❌                        CORRETO ✓
+    ──────────                       ─────────
+    Alterar bloco antigo             Adicionar novo bloco
+                                     com compensação
+
+    [1]──[2]──[3]                    [1]──[2]──[3]──[4]
+          │                                         │
+          ▼                                         ▼
+       "Corrigir"                              "Compensar"
+
+
+═══════════════════════════════════════════════════════════════════
+                    REDE P2P DISTRIBUÍDA
+═══════════════════════════════════════════════════════════════════
+
+    CLIENTE-SERVIDOR                 PEER-TO-PEER (P2P)
+    ────────────────                 ──────────────────
+
+         [SERVER]                     [P]──────[P]
+            │                          │ ╲    ╱ │
+        ┌───┼───┐                      │  ╲  ╱  │
+        │   │   │                      │   ╲╱   │
+       [C] [C] [C]                    [P]──────[P]
+
+    Ponto único de falha             Sem ponto central
+    Controle centralizado            Todos são iguais
+
+
+═══════════════════════════════════════════════════════════════════
+                    CONSENSO E REGRA DA MAIORIA
+═══════════════════════════════════════════════════════════════════
+
+    Nó divergente detectado:
+
+    NÓ A: [1]─[2]─[3]  ───┐
+    NÓ B: [1]─[2]─[3]     ├──▶ 80% = VERDADE
+    NÓ C: [1]─[2]─[3]     │
+    NÓ D: [1]─[2]─[3]  ───┘
+    NÓ E: [1]─[2]─[X]  ───────▶ 20% = CORRIGIDO
+
+    ✓ Nó E atualizado automaticamente para versão majoritária
+
+
+═══════════════════════════════════════════════════════════════════
+                    CAMADAS DE SEGURANÇA
+═══════════════════════════════════════════════════════════════════
+
+    ┌─────────────────────────────────────────────────────────┐
+    │  CAMADA 3: REDE DISTRIBUÍDA                             │
+    │  └─ Ataque precisa de 51% dos nós simultaneamente       │
+    │                                                         │
+    │    ┌─────────────────────────────────────────────────┐  │
+    │    │  CAMADA 2: ENCADEAMENTO                         │  │
+    │    │  └─ Alterar 1 bloco exige recalcular todos      │  │
+    │    │                                                 │  │
+    │    │    ┌─────────────────────────────────────────┐  │  │
+    │    │    │  CAMADA 1: HASH CRIPTOGRÁFICO           │  │  │
+    │    │    │  └─ SHA256: one-way, avalanche, etc.    │  │  │
+    │    │    └─────────────────────────────────────────┘  │  │
+    │    └─────────────────────────────────────────────────┘  │
+    └─────────────────────────────────────────────────────────┘
+
+    Cada camada MULTIPLICA a dificuldade de ataque
+
+═══════════════════════════════════════════════════════════════════
+```
+
+---
+
+## Próximos Passos
+
+Este documento cobre os fundamentos de **registros imutáveis** e **redes P2P distribuídas**. Os próximos tópicos a estudar incluem:
+
+- [ ] **Proof of Work (PoW)** — Mineração, dificuldade e o custo real de um ataque 51%
+- [ ] **Nonce** — O número que torna a mineração um desafio computacional
+- [ ] **Proof of Stake (PoS)** — Alternativa ao PoW baseada em participação econômica
+- [ ] **Merkle Trees** — Eficiência na verificação de transações
+- [ ] **Transações e UTXO** — Como o dinheiro "flui" na blockchain
+- [ ] **Contratos Inteligentes** — Código executável na blockchain
+
+---
+
+## Referências Técnicas
+
+- **SHA256:** [NIST FIPS 180-4](https://csrc.nist.gov/publications/detail/fips/180/4/final)
+- **Bitcoin Whitepaper:** [Satoshi Nakamoto, 2008](https://bitcoin.org/bitcoin.pdf)
+
+---
+
+*Documento criado para consolidação de estudos sobre blockchain — Parte 1: Estrutura e Criptografia + Parte 2: Redes Distribuídas.*
