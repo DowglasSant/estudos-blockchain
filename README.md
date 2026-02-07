@@ -1,6 +1,6 @@
-# Blockchain: Fundamentos de Registros Imutáveis e Redes Distribuídas
+# Blockchain: Fundamentos Completos
 
-Este documento consolida os conceitos fundamentais de blockchain, cobrindo **registros imutáveis** e **redes P2P distribuídas**, servindo como referência para estudo e revisão.
+Este documento consolida os conceitos fundamentais de blockchain, cobrindo **registros imutáveis**, **redes P2P distribuídas** e **Proof of Work**, servindo como referência para estudo e revisão.
 
 ---
 
@@ -20,12 +20,22 @@ Este documento consolida os conceitos fundamentais de blockchain, cobrindo **reg
 9. [Redes P2P: Conceito Geral](#redes-p2p-conceito-geral)
 10. [P2P Aplicado ao Blockchain](#p2p-aplicado-ao-blockchain)
 11. [Consenso e Regra da Maioria](#consenso-e-regra-da-maioria)
+    - [Tolerância a Falha Bizantina (BFT)](#a-base-teórica-tolerância-a-falha-bizantina-bft)
+    - [O Problema dos Generais Bizantinos](#o-problema-original)
+    - [BFT aplicado ao Blockchain](#traduzindo-para-blockchain)
 12. [Ataque 51%: O Limite da Descentralização](#ataque-51-o-limite-da-descentralização)
 
+### Parte 3: Proof of Work e Mineração
+13. [O Problema: Criação Instantânea de Blocos](#o-problema-criação-instantânea-de-blocos)
+14. [Nonce: O Número Mágico](#nonce-o-número-mágico)
+15. [Proof of Work (PoW)](#proof-of-work-pow)
+16. [Dificuldade da Rede](#dificuldade-da-rede)
+17. [Por que PoW Funciona](#por-que-pow-funciona)
+
 ### Resumo e Referências
-13. [Resumo Visual](#resumo-visual)
-14. [Próximos Passos](#próximos-passos)
-15. [Referências Técnicas](#referências-técnicas)
+18. [Resumo Visual](#resumo-visual)
+19. [Próximos Passos](#próximos-passos)
+20. [Referências Técnicas](#referências-técnicas)
 
 ---
 
@@ -538,7 +548,106 @@ Quando um novo bloco é criado:
 
 ## Consenso e Regra da Maioria
 
-### O Problema
+### A Base Teórica: Tolerância a Falha Bizantina (BFT)
+
+O mecanismo de consenso do blockchain é baseado em um problema clássico da ciência da computação: o **Problema dos Generais Bizantinos** (1982, Leslie Lamport).
+
+#### O Problema Original
+
+Imagine vários generais de um exército cercando uma cidade inimiga. Eles precisam decidir em conjunto: **atacar ou recuar**. A comunicação é feita por mensageiros, mas:
+
+- Alguns generais podem ser **traidores** (enviam mensagens falsas)
+- Mensageiros podem ser **interceptados**
+- Mesmo assim, os generais leais precisam chegar a um **consenso correto**
+
+```
+                    PROBLEMA DOS GENERAIS BIZANTINOS
+    ═══════════════════════════════════════════════════════
+
+              General A                General B
+             (Leal ✓)                (Leal ✓)
+            "Atacar!"               "Atacar!"
+                 ╲                     ╱
+                  ╲                   ╱
+                   ▼                 ▼
+              ┌────────────────────────┐
+              │    CIDADE INIMIGA      │
+              └────────────────────────┘
+                   ▲                 ▲
+                  ╱                   ╲
+                 ╱                     ╲
+            "Recuar!"               "Atacar!"
+           General C                General D
+          (Traidor ✗)              (Leal ✓)
+
+    Problema: Como os generais leais (A, B, D) chegam
+    a um consenso correto, mesmo com C sendo traidor?
+```
+
+#### Traduzindo para Blockchain
+
+| Generais Bizantinos | Blockchain |
+|---------------------|------------|
+| Generais | Nós da rede |
+| Generais leais | Nós honestos |
+| Generais traidores | Nós maliciosos |
+| Mensageiros | Protocolo de rede (P2P) |
+| "Atacar ou recuar" | "Qual bloco é válido?" |
+| Consenso dos leais | Consenso da maioria |
+
+#### A Solução no Blockchain
+
+O blockchain resolve o Problema dos Generais Bizantinos através de uma combinação:
+
+```
+┌───────────────────────────────────────────────────────────────┐
+│              TOLERÂNCIA A FALHA BIZANTINA (BFT)               │
+├───────────────────────────────────────────────────────────────┤
+│                                                               │
+│  1. PROOF OF WORK                                             │
+│     └─ Custa caro criar blocos → traidores pagam alto         │
+│                                                               │
+│  2. REGRA DA MAIORIA                                          │
+│     └─ Maioria honesta sempre vence (>50%)                    │
+│                                                               │
+│  3. INCENTIVO ECONÔMICO                                       │
+│     └─ Minerar honestamente é mais lucrativo que atacar       │
+│                                                               │
+│  4. VERIFICAÇÃO INDEPENDENTE                                  │
+│     └─ Cada nó valida por si mesmo, sem confiar nos outros    │
+│                                                               │
+└───────────────────────────────────────────────────────────────┘
+```
+
+#### O Limite: Regra dos 2/3
+
+A teoria da tolerância a falha bizantina prova matematicamente que:
+
+> **Um sistema distribuído pode tolerar até 1/3 de nós maliciosos e ainda funcionar corretamente.**
+
+```
+Rede com 9 nós:
+
+    Até 3 traidores (33%) → Sistema funciona corretamente ✓
+    4+ traidores (44%+)   → Consenso pode ser comprometido ✗
+
+Na prática, o blockchain (com PoW) eleva esse limite:
+    O atacante precisa de >50% do poder computacional
+    (não apenas >33% dos nós)
+```
+
+#### Por que o Blockchain é uma Solução Elegante
+
+Antes do Bitcoin, as soluções para o Problema dos Generais Bizantinos exigiam:
+- Que os participantes se conhecessem
+- Comunicação direta entre todos os pares
+- Rodadas de votação sincronizadas
+
+O Bitcoin/blockchain resolveu isso para **participantes anônimos** em uma **rede aberta**, usando PoW como mecanismo de custo e a cadeia mais longa como critério de verdade.
+
+---
+
+### O Problema na Prática
 
 Em uma rede distribuída, como decidir qual versão da blockchain é a "correta"?
 
@@ -707,7 +816,311 @@ Bitcoin (exemplo aproximado):
 
 ### Nota Importante
 
-Este modelo considera apenas a **quantidade de nós**. Em redes reais com **Proof of Work** (como Bitcoin), o ataque 51% se refere ao **poder computacional** (hashrate), não apenas ao número de nós. Isso adiciona outra camada de dificuldade que será estudada no tópico de PoW.
+Este modelo considera apenas a **quantidade de nós**. Em redes reais com **Proof of Work** (como Bitcoin), o ataque 51% se refere ao **poder computacional** (hashrate), não apenas ao número de nós. Isso adiciona outra camada de dificuldade que veremos a seguir.
+
+---
+
+# Parte 3: Proof of Work e Mineração
+
+---
+
+## O Problema: Criação Instantânea de Blocos
+
+Até agora, vimos que o hash de um bloco é calculado assim:
+
+```
+Hash = SHA256(dados + hash_anterior)
+```
+
+**O problema:** esse cálculo é **instantâneo**. Qualquer computador pode gerar milhões de hashes por segundo.
+
+```
+Sem custo computacional:
+
+    Criar bloco legítimo:     0.001 segundos
+    Criar bloco fraudulento:  0.001 segundos
+
+    → Atacante pode criar blocos tão rápido quanto a rede honesta
+    → Sem barreira de entrada
+    → Sistema inseguro
+```
+
+**A solução:** adicionar um **custo computacional** à criação de blocos.
+
+---
+
+## Nonce: O Número Mágico
+
+### O que é Nonce?
+
+**Nonce** = "**N**umber used **ONCE**" (número usado uma vez)
+
+É um campo adicional no bloco que o minerador pode **alterar livremente** para tentar gerar um hash que atenda a uma condição específica.
+
+### Estrutura do Bloco com Nonce
+
+```
+┌─────────────────────────────────────────┐
+│              BLOCO N                    │
+├─────────────────────────────────────────┤
+│  Hash Anterior: 0000abc123def456...     │
+│  Dados: "Alice → Bob: 50 BTC"           │
+│  Timestamp: 1699900800                  │
+│  Nonce: 8294712                         │  ← Minerador ajusta isso
+├─────────────────────────────────────────┤
+│  Hash: 0000f7d2e1a9b8c7...              │  ← Deve atender à dificuldade
+└─────────────────────────────────────────┘
+```
+
+### Nova Fórmula do Hash
+
+```
+Hash = SHA256(dados + hash_anterior + timestamp + nonce)
+                                                   │
+                                    Único campo que pode ser alterado
+                                    para "procurar" um hash válido
+```
+
+### Por que o Nonce Existe?
+
+O nonce permite que o minerador **tente diferentes valores** até encontrar um hash que satisfaça a condição de dificuldade, **sem alterar os dados reais do bloco**.
+
+---
+
+## Proof of Work (PoW)
+
+### Mineração é Força Bruta
+
+**Não existe estratégia.** Mineração é pura **tentativa e erro**:
+
+```go
+// Pseudocódigo da mineração
+for {
+    hash = SHA256(bloco + nonce)
+
+    if hash.começa_com("0000...") {
+        return "Bloco minerado!"
+    }
+
+    nonce++  // Tenta o próximo
+}
+```
+
+### A Realidade da Mineração
+
+| Aspecto | Realidade |
+|---------|-----------|
+| **Estratégia** | Não existe. É pura tentativa e erro |
+| **Previsibilidade** | Zero. Impossível saber qual nonce vai funcionar |
+| **Vantagem competitiva** | Quem tem mais poder computacional tenta mais nonces/segundo |
+| **Fator sorte** | Um PC fraco pode encontrar antes de um forte (improvável, mas possível) |
+
+### Por que Não Dá pra "Calcular" o Nonce Certo?
+
+Por causa do **efeito avalanche** do SHA256 — não há padrão entre nonces consecutivos:
+
+```
+nonce = 1000000  →  hash = 7f3a8b2c1d...  ✗ (não começa com 0000)
+nonce = 1000001  →  hash = 2e9c1da4f8...  ✗ (não começa com 0000)
+nonce = 1000002  →  hash = 0000f7e2b1...  ✓ (ACHEI!)
+```
+
+- O hash do nonce `1000002` não tem **nenhuma relação** com o hash do `1000001`
+- Não há como "se aproximar" do resultado
+- Cada tentativa é independente — como jogar dados
+
+### Consumo de Energia
+
+É por isso que mineração consome tanta energia:
+
+```
+Rede Bitcoin (exemplo):
+
+    ~500 EH/s (exahashes por segundo)
+    = 500.000.000.000.000.000.000 tentativas por segundo
+    = 500 quintilhões de hashes por segundo
+
+    Tudo isso para "adivinhar" o próximo nonce válido
+```
+
+---
+
+### O Conceito
+
+### O Conceito
+
+**Proof of Work** (Prova de Trabalho) é um mecanismo que exige que o minerador **prove** que gastou recursos computacionais para criar um bloco.
+
+A prova é simples: o hash do bloco deve começar com um **número específico de zeros**.
+
+### Como Funciona na Prática
+
+```
+Dificuldade definida pela rede: hash deve começar com "0000"
+
+O minerador tenta diferentes valores de nonce:
+
+┌──────────────────────────────────────────────────────────────────┐
+│ Tentativa │ Nonce │ Hash Resultante                    │ Válido │
+├───────────┼───────┼────────────────────────────────────┼────────┤
+│     1     │   0   │ 7a3f8b2c1d9e4f5a6b7c8d9e0f1a2b3c │   ✗    │
+│     2     │   1   │ b2e9f1a4c8d7e6f5a4b3c2d1e0f9a8b7 │   ✗    │
+│     3     │   2   │ 1c8d7e3f2a9b0c1d2e3f4a5b6c7d8e9f │   ✗    │
+│    ...    │  ...  │ ...                                │   ✗    │
+│ 8.294.712 │8294712│ 0000a8f3b2c1d4e5f6a7b8c9d0e1f2a3 │   ✓    │
+└──────────────────────────────────────────────────────────────────┘
+
+Após 8.294.712 tentativas, encontrou um hash válido!
+```
+
+### Visualização do Processo
+
+```
+                    PROCESSO DE MINERAÇÃO
+    ═══════════════════════════════════════════════════════
+
+    Dados do bloco (fixos):
+    ┌─────────────────────────────────────────┐
+    │ Hash Anterior: 0000abc...               │
+    │ Transações: [tx1, tx2, tx3]             │
+    │ Timestamp: 1699900800                   │
+    └─────────────────────────────────────────┘
+                        │
+                        ▼
+    ┌─────────────────────────────────────────┐
+    │         LOOP DE MINERAÇÃO               │
+    │                                         │
+    │   nonce = 0                             │
+    │   │                                     │
+    │   ├─▶ hash = SHA256(bloco + nonce)      │
+    │   │                                     │
+    │   ├─▶ hash começa com "0000"?           │
+    │   │       │                             │
+    │   │       ├─ NÃO → nonce++ → repetir    │
+    │   │       │                             │
+    │   │       └─ SIM → BLOCO MINERADO! ✓    │
+    │   │                                     │
+    └───┴─────────────────────────────────────┘
+                        │
+                        ▼
+    ┌─────────────────────────────────────────┐
+    │ Bloco válido com nonce = 8294712        │
+    │ Hash: 0000f7d2e1a9b8c7d6e5f4a3b2c1d0   │
+    └─────────────────────────────────────────┘
+```
+
+---
+
+## Dificuldade da Rede
+
+### O que é Dificuldade?
+
+A **dificuldade** define quantos zeros o hash deve ter no início. Mais zeros = mais difícil encontrar.
+
+### Impacto da Dificuldade
+
+```
+Dificuldade    Prefixo exigido    Tentativas médias    Tempo estimado*
+────────────────────────────────────────────────────────────────────────
+    1          0...               16                   instantâneo
+    2          00...              256                  instantâneo
+    3          000...             4.096                milissegundos
+    4          0000...            65.536               segundos
+    5          00000...           1.048.576            minutos
+    6          000000...          16.777.216           dezenas de min
+    ...        ...                ...                  ...
+    19         0000000000...      ~2⁷⁶                 anos/décadas
+
+* Tempo varia conforme poder computacional
+```
+
+### Ajuste Dinâmico
+
+No Bitcoin, a dificuldade é **ajustada automaticamente** a cada 2016 blocos (~2 semanas) para manter o tempo médio de mineração em **~10 minutos por bloco**.
+
+```
+Se blocos estão sendo minerados muito rápido:
+    → Aumenta dificuldade (mais zeros)
+
+Se blocos estão sendo minerados muito devagar:
+    → Diminui dificuldade (menos zeros)
+```
+
+---
+
+## Por que PoW Funciona
+
+### Assimetria Fundamental
+
+| Ação | Custo |
+|------|-------|
+| **Minerar** (encontrar nonce válido) | Milhões de tentativas |
+| **Verificar** (conferir se hash é válido) | 1 única operação |
+
+```
+Minerador:
+    hash = SHA256(bloco + 0)        ✗
+    hash = SHA256(bloco + 1)        ✗
+    hash = SHA256(bloco + 2)        ✗
+    ... (milhões de tentativas) ...
+    hash = SHA256(bloco + 8294712)  ✓  ← Encontrou!
+
+Verificador:
+    hash = SHA256(bloco + 8294712)
+    hash começa com "0000"?  ✓  ← Verificado instantaneamente!
+```
+
+### Custo Real de um Ataque
+
+Agora o atacante precisa:
+
+1. **Alterar o bloco** com informação fraudulenta
+2. **Re-minerar o bloco** (encontrar novo nonce) — **CARO**
+3. **Re-minerar TODOS os blocos subsequentes** — **MUITO CARO**
+4. **Fazer isso mais rápido que toda a rede honesta** — **PRATICAMENTE IMPOSSÍVEL**
+
+```
+Ataque em blockchain com PoW:
+
+    Bloco alterado    Trabalho necessário
+    ─────────────────────────────────────────────────
+    Bloco 99          Re-minerar 1 bloco
+    Bloco 90          Re-minerar 10 blocos
+    Bloco 50          Re-minerar 50 blocos
+    Bloco 0           Re-minerar TODA a cadeia
+
+    E enquanto o atacante re-minera...
+    A rede honesta continua adicionando blocos novos!
+
+    → Atacante precisa de >50% do poder computacional TOTAL
+    → Isso é o verdadeiro "Ataque 51%"
+```
+
+### Resumo: Camadas de Segurança com PoW
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  CAMADA 4: PROOF OF WORK                                    │
+│  └─ Cada bloco exige milhões de cálculos para ser criado    │
+│                                                             │
+│    ┌─────────────────────────────────────────────────────┐  │
+│    │  CAMADA 3: REDE DISTRIBUÍDA                         │  │
+│    │  └─ Ataque precisa de 51% do hashrate               │  │
+│    │                                                     │  │
+│    │    ┌─────────────────────────────────────────────┐  │  │
+│    │    │  CAMADA 2: ENCADEAMENTO                     │  │  │
+│    │    │  └─ Alterar 1 bloco exige re-minerar todos  │  │  │
+│    │    │                                             │  │  │
+│    │    │    ┌─────────────────────────────────────┐  │  │  │
+│    │    │    │  CAMADA 1: HASH CRIPTOGRÁFICO       │  │  │  │
+│    │    │    │  └─ SHA256: one-way, avalanche      │  │  │  │
+│    │    │    └─────────────────────────────────────┘  │  │  │
+│    │    └─────────────────────────────────────────────┘  │  │
+│    └─────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+
+Cada camada MULTIPLICA exponencialmente a dificuldade de ataque
+```
 
 ---
 
@@ -848,14 +1261,15 @@ Este modelo considera apenas a **quantidade de nós**. Em redes reais com **Proo
 
 ## Próximos Passos
 
-Este documento cobre os fundamentos de **registros imutáveis** e **redes P2P distribuídas**. Os próximos tópicos a estudar incluem:
+Este documento cobre os fundamentos de **registros imutáveis**, **redes P2P distribuídas** e **Proof of Work**. Os próximos tópicos a estudar incluem:
 
-- [ ] **Proof of Work (PoW)** — Mineração, dificuldade e o custo real de um ataque 51%
-- [ ] **Nonce** — O número que torna a mineração um desafio computacional
+- [x] **Proof of Work (PoW)** — Mineração, dificuldade e o custo real de um ataque 51%
+- [x] **Nonce** — O número que torna a mineração um desafio computacional
 - [ ] **Proof of Stake (PoS)** — Alternativa ao PoW baseada em participação econômica
 - [ ] **Merkle Trees** — Eficiência na verificação de transações
 - [ ] **Transações e UTXO** — Como o dinheiro "flui" na blockchain
 - [ ] **Contratos Inteligentes** — Código executável na blockchain
+- [ ] **Wallets e Chaves** — Criptografia assimétrica e assinaturas digitais
 
 ---
 
@@ -866,4 +1280,4 @@ Este documento cobre os fundamentos de **registros imutáveis** e **redes P2P di
 
 ---
 
-*Documento criado para consolidação de estudos sobre blockchain — Parte 1: Estrutura e Criptografia + Parte 2: Redes Distribuídas.*
+*Documento criado para consolidação de estudos sobre blockchain — Parte 1: Estrutura e Criptografia + Parte 2: Redes Distribuídas + Parte 3: Proof of Work e Mineração.*
