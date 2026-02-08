@@ -1,6 +1,6 @@
 # Blockchain: Fundamentos Completos
 
-Este documento consolida os conceitos fundamentais de blockchain, cobrindo **registros imutáveis**, **redes P2P distribuídas** e **Proof of Work**, servindo como referência para estudo e revisão.
+Este documento consolida os conceitos fundamentais de blockchain, cobrindo **registros imutáveis**, **redes P2P distribuídas**, **Proof of Work** e **protocolo de consenso**, servindo como referência para estudo e revisão.
 
 ---
 
@@ -32,10 +32,15 @@ Este documento consolida os conceitos fundamentais de blockchain, cobrindo **reg
 16. [Dificuldade da Rede](#dificuldade-da-rede)
 17. [Por que PoW Funciona](#por-que-pow-funciona)
 
+### Parte 4: Protocolo de Consenso em Ação
+18. [Cadeias Concorrentes e Longest Chain Rule](#cadeias-concorrentes-e-longest-chain-rule)
+19. [Hashing Power: Quem Decide a Corrida](#hashing-power-quem-decide-a-corrida)
+20. [Blocos Órfãos](#blocos-órfãos)
+
 ### Resumo e Referências
-18. [Resumo Visual](#resumo-visual)
-19. [Próximos Passos](#próximos-passos)
-20. [Referências Técnicas](#referências-técnicas)
+21. [Resumo Visual](#resumo-visual)
+22. [Próximos Passos](#próximos-passos)
+23. [Referências Técnicas](#referências-técnicas)
 
 ---
 
@@ -947,8 +952,6 @@ Rede Bitcoin (exemplo):
 
 ### O Conceito
 
-### O Conceito
-
 **Proof of Work** (Prova de Trabalho) é um mecanismo que exige que o minerador **prove** que gastou recursos computacionais para criar um bloco.
 
 A prova é simples: o hash do bloco deve começar com um **número específico de zeros**.
@@ -1124,6 +1127,271 @@ Cada camada MULTIPLICA exponencialmente a dificuldade de ataque
 
 ---
 
+# Parte 4: Protocolo de Consenso em Ação
+
+---
+
+## Cadeias Concorrentes e Longest Chain Rule
+
+### Como Surgem Cadeias Concorrentes
+
+Cadeias concorrentes não são apenas fruto de ataques — acontecem **naturalmente** na operação normal da rede. Quando dois mineradores encontram um nonce válido quase simultaneamente, a rede se divide temporariamente:
+
+```
+Situação: Dois mineradores encontram o bloco 101 ao mesmo tempo
+
+    Minerador A (Brasil):  encontra bloco 101 às 14:00:00.000
+    Minerador B (Japão):   encontra bloco 101 às 14:00:00.003
+
+    Ambos são válidos! Ambos cumprem a dificuldade.
+    Mas são blocos DIFERENTES (dados/nonce diferentes).
+```
+
+### A Divisão Temporária (Fork)
+
+```
+                    FORK NATURAL NA REDE
+    ═══════════════════════════════════════════════════════
+
+    Cadeia original (todos concordam até aqui):
+
+    [0]──[1]──[2]──...──[100]
+                            │
+                 ┌──────────┴──────────┐
+                 │                     │
+                 ▼                     ▼
+             [101a]                [101b]
+          (Minerador A)        (Minerador B)
+
+    Nós próximos de A: [0]──...──[100]──[101a]
+    Nós próximos de B: [0]──...──[100]──[101b]
+
+    A rede está temporariamente dividida em duas versões!
+```
+
+### A Resolução: Longest Chain Rule (Regra de Nakamoto)
+
+> **A cadeia mais longa (com mais blocos) é considerada a versão verdadeira.**
+
+A corrida é decidida por quem minerar o **próximo bloco** primeiro:
+
+```
+Cenário 1: Cadeia A minera o bloco 102 primeiro
+
+    Cadeia A: [0]──...──[100]──[101a]──[102]   ← VENCEDORA (mais longa)
+    Cadeia B: [0]──...──[100]──[101b]           ← PERDEDORA
+
+    Resultado: Toda a rede adota a Cadeia A
+
+─────────────────────────────────────────────────
+
+Cenário 2: Cadeia B minera o bloco 102 primeiro
+
+    Cadeia A: [0]──...──[100]──[101a]           ← PERDEDORA
+    Cadeia B: [0]──...──[100]──[101b]──[102]   ← VENCEDORA
+
+    Resultado: Toda a rede adota a Cadeia B
+```
+
+### Visualização Completa do Processo
+
+```
+TEMPO 0: Rede unificada
+    Todos: [0]──...──[100]
+
+TEMPO 1: Fork (dois blocos 101 minerados simultaneamente)
+    Grupo A: [0]──...──[100]──[101a]
+    Grupo B: [0]──...──[100]──[101b]
+
+TEMPO 2: Corrida pelo bloco 102
+    Grupo A: [0]──...──[100]──[101a]──[102] ✓ PRIMEIRO!
+    Grupo B: [0]──...──[100]──[101b]        ✗ Perdeu
+
+TEMPO 3: Rede reunificada
+    Todos: [0]──...──[100]──[101a]──[102]
+                              │
+                          [101b] → BLOCO ÓRFÃO (descartado)
+```
+
+---
+
+## Hashing Power: Quem Decide a Corrida
+
+### Quantidade de Nós vs Poder Computacional
+
+Um ponto crucial: **a corrida não é decidida por quantidade de nós, mas por poder de processamento (hashrate)**.
+
+```
+Cenário:
+
+    Grupo A: 1.000 nós com 70% do hashrate total
+    Grupo B: 5.000 nós com 30% do hashrate total
+
+    Quem provavelmente minera o próximo bloco primeiro?
+    → Grupo A (apesar de ter MENOS nós)
+
+    Hashrate = tentativas de nonce por segundo
+    Mais hashrate = mais chances de encontrar o nonce válido
+```
+
+### Hashrate e Probabilidade
+
+| Hashrate do Grupo | Probabilidade de Minerar Próximo Bloco |
+|--------------------|-----------------------------------------|
+| 10% da rede | ~10% de chance |
+| 30% da rede | ~30% de chance |
+| 51% da rede | ~51% de chance (controle efetivo) |
+| 70% da rede | ~70% de chance |
+
+### Por que Hashrate Importa Mais que Nós
+
+```
+1 nó com ASIC dedicado          vs       100 nós com CPUs comuns
+┌────────────────────────┐               ┌──────────────────────┐
+│ 100 TH/s (terahashes)  │               │ 0.1 TH/s (total)    │
+└────────────────────────┘               └──────────────────────┘
+          │                                        │
+          ▼                                        ▼
+   1.000x mais poder                        Quase irrelevante
+   de processamento                         na corrida
+
+→ 1 nó potente > 100 nós fracos
+→ O que conta é PODER DE PROCESSAMENTO, não democracia de nós
+```
+
+### Implicações para Segurança
+
+Isso redefine o **Ataque 51%**:
+
+```
+Ataque 51% NÃO significa:
+    ✗ Controlar 51% dos nós da rede
+
+Ataque 51% SIGNIFICA:
+    ✓ Controlar 51% do HASHRATE (poder computacional total)
+
+Na prática (Bitcoin):
+    Hashrate total: ~500 EH/s
+    Para ataque: >250 EH/s
+    Custo estimado em hardware: bilhões de dólares
+    Custo em energia: milhões de dólares por dia
+```
+
+---
+
+## Blocos Órfãos
+
+### O que São
+
+Blocos órfãos (orphan blocks) são blocos **válidos** que foram descartados porque pertenciam à cadeia que **perdeu a corrida**.
+
+```
+┌────────────────────────────────────────────────────────────┐
+│                     BLOCO ÓRFÃO                            │
+├────────────────────────────────────────────────────────────┤
+│                                                            │
+│  - Foi minerado corretamente (PoW válido)                  │
+│  - Cumpriu a dificuldade                                   │
+│  - Mas pertencia à cadeia mais curta                       │
+│  - Foi descartado quando a cadeia mais longa venceu        │
+│                                                            │
+└────────────────────────────────────────────────────────────┘
+```
+
+### Ciclo de Vida de um Bloco Órfão
+
+```
+1. CRIAÇÃO
+   Minerador B encontra nonce válido para bloco 101b   ✓
+
+2. PROPAGAÇÃO
+   Parte da rede aceita o bloco 101b                   ✓
+
+3. COMPETIÇÃO
+   Minerador A também encontra bloco 101a              ✓
+   Rede se divide temporariamente
+
+4. RESOLUÇÃO
+   Cadeia com 101a minera o bloco 102 primeiro
+   Cadeia A se torna a mais longa                      ✓
+
+5. ORFANAMENTO
+   Bloco 101b é descartado                             ✗
+   └─ Vira bloco órfão
+```
+
+### O que Acontece com o Conteúdo
+
+| Elemento | Destino |
+|----------|---------|
+| **Transações** | Voltam para o **pool de transações pendentes** (mempool) |
+| **Recompensa do minerador** | **Perdida** — o minerador não recebe nada |
+| **Trabalho computacional** | **Desperdiçado** — energia gasta sem retorno |
+
+### As Transações Não se Perdem
+
+```
+Bloco 101b (órfão) continha:
+    - Tx1: Alice → Bob: 10 BTC
+    - Tx2: Carol → Dave: 5 BTC
+    - Tx3: Eve → Frank: 2 BTC
+
+Após orfanamento:
+
+    Tx1, Tx2, Tx3 → voltam para a MEMPOOL
+                     │
+                     ▼
+              Serão incluídas em um
+              bloco futuro da cadeia
+              vencedora
+
+    → Nenhuma transação é perdida
+    → Apenas atrasadas temporariamente
+```
+
+### Frequência de Blocos Órfãos
+
+No Bitcoin, forks temporários e blocos órfãos são **raros mas normais**:
+
+```
+Taxa aproximada de blocos órfãos no Bitcoin:
+
+    ~1-2 por semana (em ~1.008 blocos minerados/semana)
+    ≈ 0.1% a 0.2% dos blocos
+
+    Motivos:
+    - Latência de rede (propagação não é instantânea)
+    - Mineradores em regiões geográficas distantes
+    - Dois mineradores encontram solução quase simultânea
+```
+
+### Resumo: Protocolo de Consenso Completo
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│              PROTOCOLO DE CONSENSO EM AÇÃO                      │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  1. DEFESA (Regra da Maioria)                                   │
+│     └─ Mudanças precisam de 50%+1 dos nós                       │
+│     └─ Ataques exigem comprometer a maioria simultaneamente     │
+│                                                                 │
+│  2. COMPETIÇÃO (Cadeias Concorrentes)                           │
+│     └─ Forks temporários são naturais                           │
+│     └─ Longest Chain Rule resolve a disputa                     │
+│     └─ Hashrate decide quem vence a corrida                     │
+│                                                                 │
+│  3. RESOLUÇÃO (Blocos Órfãos)                                   │
+│     └─ Cadeia perdedora é descartada                            │
+│     └─ Blocos descartados viram órfãos                          │
+│     └─ Transações voltam ao pool (não se perdem)                │
+│     └─ Minerador perdedor perde recompensa                      │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
 ## Resumo Visual
 
 ### Anatomia Completa de uma Blockchain
@@ -1280,4 +1548,4 @@ Este documento cobre os fundamentos de **registros imutáveis**, **redes P2P dis
 
 ---
 
-*Documento criado para consolidação de estudos sobre blockchain — Parte 1: Estrutura e Criptografia + Parte 2: Redes Distribuídas + Parte 3: Proof of Work e Mineração.*
+*Documento criado para consolidação de estudos sobre blockchain — Parte 1: Estrutura e Criptografia + Parte 2: Redes Distribuídas + Parte 3: Proof of Work e Mineração + Parte 4: Protocolo de Consenso em Ação.*

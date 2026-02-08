@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blockchain Explorer</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Courier New', monospace;
+      background: #0a0a0a;
+      color: #e0e0e0;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #111;
+      border-bottom: 2px solid #00ff88;
+      padding: 20px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    header h1 {
+      font-size: 22px;
+      color: #00ff88;
+      letter-spacing: 2px;
+    }
+
+    #status {
+      padding: 6px 16px;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+
+    #status.valid {
+      background: #00ff8820;
+      color: #00ff88;
+      border: 1px solid #00ff88;
+    }
+
+    #status.invalid {
+      background: #ff444420;
+      color: #ff4444;
+      border: 1px solid #ff4444;
+    }
+
+    .controls {
+      background: #111;
+      padding: 20px 32px;
+      border-bottom: 1px solid #222;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .controls input {
+      flex: 1;
+      max-width: 500px;
+      padding: 10px 14px;
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 4px;
+      color: #e0e0e0;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      outline: none;
+    }
+
+    .controls input:focus {
+      border-color: #00ff88;
+    }
+
+    .controls input::placeholder {
+      color: #555;
+    }
+
+    .controls button {
+      padding: 10px 24px;
+      background: #00ff88;
+      color: #0a0a0a;
+      border: none;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      letter-spacing: 1px;
+    }
+
+    .controls button:hover {
+      background: #00cc6a;
+    }
+
+    .controls button:disabled {
+      background: #333;
+      color: #666;
+      cursor: not-allowed;
+    }
+
+    .stats {
+      padding: 16px 32px;
+      display: flex;
+      gap: 32px;
+      font-size: 13px;
+      color: #888;
+      border-bottom: 1px solid #1a1a1a;
+    }
+
+    .stats span {
+      color: #00ff88;
+      font-weight: bold;
+    }
+
+    .mining-indicator {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      color: #ffaa00;
+      font-size: 13px;
+    }
+
+    .mining-indicator.active {
+      display: flex;
+    }
+
+    .spinner {
+      width: 14px;
+      height: 14px;
+      border: 2px solid #ffaa0040;
+      border-top: 2px solid #ffaa00;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .chain {
+      padding: 24px 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .block-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .chain-link {
+      width: 2px;
+      height: 24px;
+      background: #00ff8860;
+      position: relative;
+    }
+
+    .chain-link::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: -4px;
+      width: 10px;
+      height: 10px;
+      border-left: 2px solid #00ff8860;
+      border-bottom: 2px solid #00ff8860;
+      transform: rotate(-45deg);
+    }
+
+    .block {
+      background: #111;
+      border: 1px solid #222;
+      border-radius: 6px;
+      padding: 16px 20px;
+      width: 100%;
+      max-width: 700px;
+      transition: border-color 0.3s;
+    }
+
+    .block.genesis {
+      border-color: #00ff8860;
+    }
+
+    .block.new {
+      animation: fadeIn 0.4s ease-out;
+      border-color: #ffaa00;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .block-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #1a1a1a;
+    }
+
+    .block-index {
+      font-size: 16px;
+      font-weight: bold;
+      color: #00ff88;
+    }
+
+    .block-index .label {
+      color: #555;
+      font-weight: normal;
+    }
+
+    .block-nonce {
+      font-size: 12px;
+      color: #888;
+    }
+
+    .block-data {
+      background: #0a0a0a;
+      padding: 8px 12px;
+      border-radius: 4px;
+      margin-bottom: 12px;
+      font-size: 14px;
+      color: #ddd;
+      word-break: break-all;
+    }
+
+    .block-hashes {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .hash-row {
+      display: flex;
+      gap: 8px;
+      font-size: 11px;
+      align-items: baseline;
+    }
+
+    .hash-label {
+      color: #555;
+      min-width: 100px;
+      text-align: right;
+    }
+
+    .hash-value {
+      color: #6a9fff;
+      word-break: break-all;
+      flex: 1;
+    }
+
+    .hash-value.highlight {
+      color: #ffaa00;
+    }
+
+    .block-time {
+      font-size: 11px;
+      color: #444;
+      margin-top: 8px;
+      text-align: right;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>BLOCKCHAIN EXPLORER</h1>
+    <div id="status" class="valid">CHAIN VALID</div>
+  </header>
+
+  <div class="controls">
+    <input type="text" id="dataInput" placeholder="Block data (e.g. Alice sends 10 BTC to Bob)" />
+    <button id="mineBtn" onclick="addBlock()">MINE BLOCK</button>
+    <div class="mining-indicator" id="mining">
+      <div class="spinner"></div>
+      Mining...
+    </div>
+  </div>
+
+  <div class="stats">
+    <div>Blocks: <span id="blockCount">0</span></div>
+    <div>Last nonce: <span id="lastNonce">-</span></div>
+    <div>Difficulty: <span>4</span> (0000...)</div>
+  </div>
+
+  <div class="chain" id="chain"></div>
+
+  <script>
+    async function loadChain() {
+      const res = await fetch('/blocks');
+      const blocks = await res.json();
+      renderChain(blocks);
+      checkValid();
+    }
+
+    async function checkValid() {
+      const res = await fetch('/chain/valid');
+      const data = await res.json();
+      const el = document.getElementById('status');
+      el.className = data.valid ? 'valid' : 'invalid';
+      el.textContent = data.valid ? 'CHAIN VALID' : 'CHAIN INVALID';
+    }
+
+    function renderChain(blocks) {
+      const container = document.getElementById('chain');
+      container.innerHTML = '';
+
+      document.getElementById('blockCount').textContent = blocks.length;
+      if (blocks.length > 0) {
+        document.getElementById('lastNonce').textContent =
+          blocks[blocks.length - 1].nonce.toLocaleString();
+      }
+
+      blocks.forEach((block, i) => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'block-wrapper';
+
+        if (i > 0) {
+          const link = document.createElement('div');
+          link.className = 'chain-link';
+          wrapper.appendChild(link);
+        }
+
+        const isGenesis = block.index === 0;
+        const div = document.createElement('div');
+        div.className = 'block' + (isGenesis ? ' genesis' : '');
+
+        const leading = block.hash.substring(0, 4);
+        const rest = block.hash.substring(4);
+
+        div.innerHTML = `
+          <div class="block-header">
+            <div class="block-index">
+              <span class="label">Block</span> #${block.index}
+              ${isGenesis ? ' <span style="color:#555;font-size:12px">(Genesis)</span>' : ''}
+            </div>
+            <div class="block-nonce">Nonce: ${block.nonce.toLocaleString()}</div>
+          </div>
+          <div class="block-data">${block.data}</div>
+          <div class="block-hashes">
+            <div class="hash-row">
+              <span class="hash-label">hash</span>
+              <span class="hash-value"><span class="highlight">${leading}</span>${rest}</span>
+            </div>
+            <div class="hash-row">
+              <span class="hash-label">previous_hash</span>
+              <span class="hash-value">${block.previous_hash}</span>
+            </div>
+          </div>
+          <div class="block-time">${block.timestamp}</div>
+        `;
+
+        wrapper.appendChild(div);
+        container.appendChild(wrapper);
+      });
+    }
+
+    async function addBlock() {
+      const input = document.getElementById('dataInput');
+      const data = input.value.trim();
+      if (!data) { input.focus(); return; }
+
+      const btn = document.getElementById('mineBtn');
+      const mining = document.getElementById('mining');
+      btn.disabled = true;
+      mining.classList.add('active');
+
+      try {
+        const res = await fetch('/blocks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ data }),
+        });
+
+        if (res.ok) {
+          input.value = '';
+          await loadChain();
+
+          const chain = document.getElementById('chain');
+          const lastBlock = chain.lastElementChild?.querySelector('.block');
+          if (lastBlock) {
+            lastBlock.classList.add('new');
+            lastBlock.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => lastBlock.classList.remove('new'), 2000);
+          }
+        }
+      } finally {
+        btn.disabled = false;
+        mining.classList.remove('active');
+      }
+    }
+
+    document.getElementById('dataInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') addBlock();
+    });
+
+    loadChain();
+  </script>
+</body>
+</html>
